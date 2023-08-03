@@ -435,12 +435,12 @@ Internet-Draft         EVPN IP Address Resolution            August 2023
    address (SNMA) corresponding to the target address a mandated by
    [RFC4861].
 
+   At Layer-2, the source MAC MUST be that of the sender (this node).
    The receiver is expected to use the SLLAO and not the source MAC to
-   reply.  At Layer-2, the source MAC MUST be that of the sender (this
-   node).  The receiver is expected to use the SLLAO and not the source
-   MAC to build its neighbor cache entry (NCE).  If the receiver is not
+   build its neighbor cache entry (NCE).  If the receiver is not
    compliant and uses the source MAC instead, this router will receive
    and route the packets from the receiver to the source IP.
+
 
 
 
@@ -450,10 +450,10 @@ Brissette, et al.        Expires 4 February 2024                [Page 8]
 Internet-Draft         EVPN IP Address Resolution            August 2023
 
 
-   The destination SHOULD be set to the multicast MAC address associated
-   to the SNMA (see section 7 of [RFC2464] for Ethernet, unless the
-   source already knows a possible MAC address for the destination in
-   which case, the unicast MAC MUST be tried first.
+   The destination MAC SHOULD be set to the multicast MAC address
+   associated to the SNMA (see section 7 of [RFC2464] for Ethernet),
+   unless the source already knows a possible MAC address for the
+   destination, in which case the unicast MAC MUST be tried first.
 
 5.  Security Considerations
 
