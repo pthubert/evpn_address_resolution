@@ -439,8 +439,8 @@ Internet-Draft         EVPN IP Address Resolution            August 2023
    reply.  At Layer-2, the source MAC MUST be that of the sender (this
    node).  The receiver is expected to use the SLLAO and not the source
    MAC to build its neighbor cache entry (NCE).  If the receiver is not
-   compliant and uses the the source MAC instead, this router will
-   receive and route the packets from the receiver to the source IP.
+   compliant and uses the source MAC instead, this router will receive
+   and route the packets from the receiver to the source IP.
 
 
 
