@@ -14,7 +14,7 @@
 <!-- use symbolic references tags, i.e, [RFC2119] instead of [1] -->
 <?rfc sortrefs="yes" ?>
 <!-- sort the reference entries alphabetically -->
-<!-- control vertical white space 
+<!-- control vertical white space
     (using these PIs as follows is recommended by the RFC Editor) -->
 <?rfc compact="yes" ?>
 <!-- do not start each main section on a new page -->
@@ -35,7 +35,7 @@
  <!-- ***** FRONT MATTER ***** -->
 
  <front>
-   <!-- The abbreviated title is used in the page header - it is only necessary if the 
+   <!-- The abbreviated title is used in the page header - it is only necessary if the
         full title is longer than 39 characters -->
    <title abbrev="EVPN IP Address Resolution">EVPN IP Address Resolution Extension</title>
 
@@ -108,11 +108,11 @@
    <keyword>IP address resolution</keyword>
 
    <abstract>
-     <t>This document presents an enhanced control plane for Ethernet VPN (EVPN) 
-     that eliminates the need for data plane flooding of ARP/ND messages. 
-     EVPN enables hosts to communicate within the same subnet, and the current 
-     EVPN E-LAN solution relies on data plane flooding for IP address resolution. 
-     This proposed solution aims to reduce flooding and optimize communication 
+     <t>This document presents an enhanced control plane for Ethernet VPN (EVPN)
+     that eliminates the need for data plane flooding of ARP/ND messages.
+     EVPN enables hosts to communicate within the same subnet, and the current
+     EVPN E-LAN solution relies on data plane flooding for IP address resolution.
+     This proposed solution aims to reduce flooding and optimize communication
      in large-scale networks.
     </t>
    </abstract>
@@ -129,32 +129,32 @@
  <middle>
    <section anchor="intro" title="Introduction">
     <t>
-    Ethernet VPN (EVPN) solutions, as defined in <xref target="RFC7432"/>, 
-    facilitate communication between connected endpoints (CE) or hosts that 
-    share the same subnet. This communication utilizes broadcast and multicast 
-    forwarding, also known as flooding, which is a common behavior in Layer-2 
-    networks. However, this flooding behavior can pose challenges for some 
-    providers, leading to unpredictable patterns and increased bandwidth 
-    consumption in their networks. Moreover, it may expose security risks, 
-    potentially enabling malicious users to launch DDoS attacks. 
+    Ethernet VPN (EVPN) solutions, as defined in <xref target="RFC7432"/>,
+    facilitate communication between connected endpoints (CE) or hosts that
+    share the same subnet. This communication utilizes broadcast and multicast
+    forwarding, also known as flooding, which is a common behavior in Layer-2
+    networks. However, this flooding behavior can pose challenges for some
+    providers, leading to unpredictable patterns and increased bandwidth
+    consumption in their networks. Moreover, it may expose security risks,
+    potentially enabling malicious users to launch DDoS attacks.
 	  </t>
 
     <t>
-    While <xref target="RFC9161"/> has made significant progress in reducing 
-    flooding over EVPN networks through ARP/ND proxy behavior, certain aspects 
-    remain unresolved. The initial sign of life messaging when a CE/host 
-    connects to the network is not addressed. Intra-subnet communication relies 
-    on neighbor discovery protocols (ARP/ND), where ARP requests and Neighbor 
-    Solicitation (NS) messages are flooded across the Layer-2 core network to 
+    While <xref target="RFC9161"/> has made significant progress in reducing
+    flooding over EVPN networks through ARP/ND proxy behavior, certain aspects
+    remain unresolved. The initial sign of life messaging when a CE/host
+    connects to the network is not addressed. Intra-subnet communication relies
+    on neighbor discovery protocols (ARP/ND), where ARP requests and Neighbor
+    Solicitation (NS) messages are flooded across the Layer-2 core network to
     all remote devices connected to that subnet.
     </t>
 
     <t>
-    Unfortunately, in a large-scale network, this flood of three or more 
-    broadcast/multicast messages from CE/hosts to discover remote CE/hosts can 
-    lead to unpredictable flooding storms. Some deployments resort to 
-    provisioning static ARP/ND entries to mitigate this behavior. However, 
-    maintaining such a list of static entries proves to be costly and cumbersome, 
+    Unfortunately, in a large-scale network, this flood of three or more
+    broadcast/multicast messages from CE/hosts to discover remote CE/hosts can
+    lead to unpredictable flooding storms. Some deployments resort to
+    provisioning static ARP/ND entries to mitigate this behavior. However,
+    maintaining such a list of static entries proves to be costly and cumbersome,
     especially when adding or removing new CE/hosts.
     </t>
 
@@ -170,7 +170,7 @@
       <dt>PE:</dt><dd>Provider Edge Router</dd>
 			<dt>Request / Solicitation:</dt><dd>The term request is widely used in this
 		    document. It refers to ARP request for IPv4 or ND solicitation for IPv6.</dd>
-			<dt>RPL:</dt><dd>Route Policy Language</dd>			
+			<dt>RPL:</dt><dd>Route Policy Language</dd>
 			<dt>RT-2:</dt><dd>Referring to EVPN route type-2 (MAC/IP)</dd>
         </dl>
 	    </t>
@@ -179,16 +179,16 @@
 
    <section anchor="CP-solution" title="Address Resolution Solution">
 
-	<t> 
-  This document proposes a new solution extending the EVPN control-plane where 
-  the IP address resolution is performed from control-plane rather than 
-  data-plane. The procedure leverages ARP/ND proxy capabilities as described 
-  in <xref target="RFC9161"/>. The following section describes the behaviour to 
+	<t>
+  This document proposes a new solution extending the EVPN control-plane where
+  the IP address resolution is performed from control-plane rather than
+  data-plane. The procedure leverages ARP/ND proxy capabilities as described
+  in <xref target="RFC9161"/>. The following section describes the behaviour to
   perform ARP resolution. Neighbor Discovery Protocol works in a similar manner.
 	</t>
 
         <figure><preamble/><artwork><![CDATA[
- 
+
 	+-----+     +-----+   +---------+   +-----+     +-----+
 	| CE1 |-----| PE1 |---|   CORE  |---| PE2 |-----| CE2 |
 	+-----+     +-----+   |    L2   |   +-----+     +-----+
@@ -198,64 +198,64 @@
         </artwork><postamble>Layer-2 Network</postamble></figure>
 
   <t>
-  This picture shows a simple layer-2 network where a common subnet is shared across CE1 
-  and CE2. PE1 and PE2 support the new IP address resolution procedure. 
+  This picture shows a simple layer-2 network where a common subnet is shared across CE1
+  and CE2. PE1 and PE2 support the new IP address resolution procedure.
   </t>
 
 	<t>
-  In this example, CE1 initiates the communication with CE2 using ARP 
+  In this example, CE1 initiates the communication with CE2 using ARP
   protocol. The new procedure is as follow:
 
 	<list style="numbers">
-		<t>CE1 sends ARP requests to PE1 with destination IP=IP2 and broadcast MAC 
+		<t>CE1 sends ARP requests to PE1 with destination IP=IP2 and broadcast MAC
     address as destination address.
     </t>
 
-		<t>PE1 punts incoming ARP requests to control-plane. Data-plane floods 
-    these requests to all locally connected ACs (in the same broadcast domain) 
+		<t>PE1 punts incoming ARP requests to control-plane. Data-plane floods
+    these requests to all locally connected ACs (in the same broadcast domain)
     only and avoids the replication / flooding to any remote PEs over the L2 core.
     </t>
 
-		<t>PE1 learns the CE1 ARP request entry in control-plane to keep track of 
-    this request.  PE1 creates a single new BGP-EVPN IP address resolution 
-    route, which is advertised to remote PEs (PE2). Basically, it requests all 
-    remote PEs to look for a specific IP address which may be connected for 
+		<t>PE1 learns the CE1 ARP request entry in control-plane to keep track of
+    this request.  PE1 creates a single new BGP-EVPN IP address resolution
+    route, which is advertised to remote PEs (PE2). Basically, it requests all
+    remote PEs to look for a specific IP address which may be connected for
     probing purpose.
     </t>
 
-		<t>PE2 receives a single IP address resolution route and triggers local 
-    CE2 ARP request to all locally connected ACs in the same broadcast domain. 
-    PE2 uses CE1 source MAC/IP per ARP request towards connected CEs for 
-    transparency. PE2 performs local probing for specific destination IP2 
+		<t>PE2 receives a single IP address resolution route and triggers local
+    CE2 ARP request to all locally connected ACs in the same broadcast domain.
+    PE2 uses CE1 source MAC/IP per ARP request towards connected CEs for
+    transparency. PE2 performs local probing for specific destination IP2
     address. This becomes a local behaviour from PE2 point-of-view.
 		</t>
 
 		<t>CE2 receives the ARP request and sends an ARP reply with its own information.</t>
 
-		<t>The reply may be punted to control-plane on PE2 where the new MAC_CE2 and 
-    IP_CE2 binding is created. The PE2 advertises to PE1 via existing EVPN RT2 
-    (MAC+IP) the CE2 host information. CE2s ARP Reply may also be forwarded 
+		<t>The reply may be punted to control-plane on PE2 where the new MAC_CE2 and
+    IP_CE2 binding is created. The PE2 advertises to PE1 via existing EVPN RT2
+    (MAC+IP) the CE2 host information. CE2s ARP Reply may also be forwarded
     based on a lookup on the destination MAC address via the layer-2 data-plane.
 		</t>
 
-		<t> PE1 may create local MAC/IP binding entry in control-plane based on 
-    received BGP EVPN RT-2.  Based on the ARP request entry learned initially, 
-    PE1 creates an ARP reply message and send it to CE1.  PE1 uses CE2_MAC + 
-    CE2_IP for this ARP reply. Optionally, a GARP may be transmitted in 
-    replacement of the ARP reply as recommended per <xref target="RFC9161"/> when ARP proxy 
+		<t> PE1 may create local MAC/IP binding entry in control-plane based on
+    received BGP EVPN RT-2.  Based on the ARP request entry learned initially,
+    PE1 creates an ARP reply message and send it to CE1.  PE1 uses CE2_MAC +
+    CE2_IP for this ARP reply. Optionally, a GARP may be transmitted in
+    replacement of the ARP reply as recommended per <xref target="RFC9161"/> when ARP proxy
     is in use.
 		</t>
 
-		<t>PE1 marks the initial CE2 request as resolved in control-plane. 
+		<t>PE1 marks the initial CE2 request as resolved in control-plane.
     The associated IP address resolution route advertised in BGP is withdrawn.</t>
 	</list>
 	</t>
-	
+
 	</section>
 
 	<section anchor="IP-res-nlri" title="BGP EVPN Address Resolution Route">
 
-            <t>The IP address resolution procedure requires a new BGP route in EVPN. 
+            <t>The IP address resolution procedure requires a new BGP route in EVPN.
             The BGP EVPN NLRI as defined in <xref target="RFC7432"/> is shown below:
 
             <figure><preamble/><artwork><![CDATA[
@@ -288,7 +288,7 @@
 
             <t>An EVPN IP Address Resolution route type for IPv4 or IPv6 consists of
 			 the following fields:
-            <figure><preamble/><artwork><![CDATA[
+            <figure anchor="NLRI"><preamble/><artwork><![CDATA[
             +----------------------------------------+
             |      RD (8 octets)                     |
             +----------------------------------------+
@@ -311,13 +311,13 @@
             | Destination IP Prefix (4 or 16 octets) |
             +----------------------------------------+
                     ]]>
-                    </artwork><postamble>EVPN Address Resolution Route NLRI for 
+                    </artwork><postamble>EVPN Address Resolution Route NLRI for
 					IPv4 and IPv6</postamble></figure>
                 </t>
 
             <t>Where:
             <list style="symbols">
-            <t>The Length field of the BGP EVPN NLRI for an EVPN IP Address 
+            <t>The Length field of the BGP EVPN NLRI for an EVPN IP Address
 			      Resolution route
             MUST be either 44 (if IPv4 addresses are carried) or 68 (if IPv6
             addresses are carried). The source and destination IP prefixes MUST
@@ -331,7 +331,7 @@
             identifier. It identifies the first-hop interface when an ESI is configured.
             The ESI format is described in <xref target="RFC7432"/>. </t>
 
-            <t>The source MAC address is the one from the CE originating the 
+            <t>The source MAC address is the one from the CE originating the
             IP address resolution request.</t>
 
             <t>The destination MAC address is the one received from the request on
@@ -356,18 +356,18 @@
 			</list>
 			</t>
 
-            <t>The RD, Ethernet Tag ID, source and destination MAC, source and destination 
+            <t>The RD, Ethernet Tag ID, source and destination MAC, source and destination
 			      IP prefix length and IP prefix are part of
             the route key used by BGP to compare routes. The rest of the fields
             are not part of the route key.</t>
         </section>
     </section>
-    
+
 	<section anchor="Considerations" title="Considerations">
 
-  	<t> There are clear reasons for the usage of a new EVPN BGP route type to 
+  	<t> There are clear reasons for the usage of a new EVPN BGP route type to
     perform IP address resolution:
-	
+
 		<list style="symbols">
 		<t>Possible prioritization of routes exchange between PE (importance of ARP/ND
       request/solicitation compare to other routes).</t>
@@ -375,11 +375,11 @@
 		<t>Specific manipulation over each IP address resolution request and response (security
       feature, RPL, etc.).</t>
 
-		<t>Usage of dedicate route reflector for scalability and performance to handle specifically 
+		<t>Usage of dedicate route reflector for scalability and performance to handle specifically
 		any address resolution routes.</t>
 
-		<t>Backward interoperability with current machinery. For instance, the 
-    extension of RT-2 to achieve similar behaviour is inappropriate. Existing 
+		<t>Backward interoperability with current machinery. For instance, the
+    extension of RT-2 to achieve similar behaviour is inappropriate. Existing
     deployed routers may explicit use RT-2 routes for forwarding purpose only.
     </t>
 
@@ -387,19 +387,19 @@
 		</list>
 		</t>
         <section anchor="ESI usage" title="Usage of ESI field">
-            <t>The ESI field is meaningful when CE/host is connected to 
-            multi-homed PE running all-active load-balancing mode. Its purpose 
-            is to avoid unnecessary probing towards the originating CE/host 
+            <t>The ESI field is meaningful when CE/host is connected to
+            multi-homed PE running all-active load-balancing mode. Its purpose
+            is to avoid unnecessary probing towards the originating CE/host
             from where the initial request was sourced.
             </t>
         </section>
 
         <section anchor="Originator address" title="Originating Address">
-        <t>MAC address and IP address of the originating CE are transmitted 
+        <t>MAC address and IP address of the originating CE are transmitted
 		as part of the new NLRI. They serve multiple purposes:</t>
 		<list style="symbols">
-		<t>Allow remote PE to reconstruct the ARP/ND request packet as if 
-		it was received from the data-plane. The targeted CE won't notice the difference 
+		<t>Allow remote PE to reconstruct the ARP/ND request packet as if
+		it was received from the data-plane. The targeted CE won't notice the difference
 		between control-plane based and data-plane based solutions.</t>
 
 		<t>Allow multiple CE/host to send ARP/ND request towards the same destination.
@@ -410,62 +410,82 @@
         </section>
 
 		<section anchor="ns-on-egress-PE" title="Rebuilding NS message on Egress PE">
-			<t>In the case of IPv6, neighbor solicitation (NS) message are built 
-      using two different IP addresses.  First, the outer destination IP 
-      address is the solicited node multicast address set to 
-      [ff02::1:ff][low-3-bytes-Unicast-IP]. The second is the target IP address 
-      of this solicitation.  The latter is encoded within the NLRI.  The egress 
-      PE is capable to reconstruct the NS message based on the destination MAC 
-      encoded as part of that NLRI where the multicast destination MAC address 
-      is set to [33:33][low-4-bytes-Multicast-IP].</t>
+			<t>In the case of IPv6, the neighbor solicitation (NS) message
+            MUST be built as specified in <xref target="RFC4861"/> sections 4.3
+            and 7.2.2 for the address lookup NS message.
+           </t><t>
+            The Source IP address and the Link Layer Address in the SLLOA option
+            MUST be set to the  Source IP Prefix and the Source MAC address
+            in the EVPN Address Resolution Route NLRI <xref target="NLRI"/>,
+            respectively.
+           </t><t>
+            The target address MUST be set to the Destination IP Prefix field of
+            the NLRI, and the IP destination address is solicited-node multicast
+            address (SNMA) corresponding to the target address a mandated by
+            <xref target="RFC4861"/>.
+            </t><t>
+            The receiver is expected to use the SLLAO and not the source MAC to
+            reply.
+            At Layer-2, the source MAC MUST be that of the sender (this node).
+            The receiver is expected to use the SLLAO and not the source MAC to
+            build its neighbor cache entry (NCE). If the receiver is not
+            compliant and uses the the source MAC instead, this router will
+            receive and route the packets from the receiver to the source IP.
+            </t><t>
+            The destination SHOULD be set to the multicast MAC address
+            associated to the SNMA (see section 7 of <xref target="RFC2464"/>
+            for Ethernet, unless the source already knows a possible MAC address
+            for the destination in which case, the unicast MAC MUST be tried
+            first.
+            </t>
 		</section>
 
 	</section>
 <!--
   <section anchor="Flags" title="Notes on some ARP/ND scenarios">
 			<t>
-      The procedure described in this document solves problems regarding CE/Host 
+      The procedure described in this document solves problems regarding CE/Host
       address resolution. This section explains some ARP/ND corner cases and their
       expected outcomes.</t>
 
 			<t><list style="symbols">
-				<t>Gratuitous ARP (GARP): 
-        <t>GARP messages from CE/host are usually sent when its MAC/IP association 
-        has changed. EVPN route type-2 with the new binding is generated 
+				<t>Gratuitous ARP (GARP):
+        <t>GARP messages from CE/host are usually sent when its MAC/IP association
+        has changed. EVPN route type-2 with the new binding is generated
         and advertised to remote PEs where their respective forwarding
-        tables are updated. EVPN mobility procedure is then performed where GARP 
+        tables are updated. EVPN mobility procedure is then performed where GARP
         is transmitted towards remote CE as per <xref target="RFC9161"/> section 3.2.
         </t>
         </t>
 				<t>IPv4 probes (ARP request with sender's IP address = 0.0.0.0):
-        <t>ARP probing remains only active between router and connected CE/host. 
-        ARP proxy behaviour is not affected. The source IP address should be taken from 
+        <t>ARP probing remains only active between router and connected CE/host.
+        ARP proxy behaviour is not affected. The source IP address should be taken from
         the gateway interface.
         </t>
         </t>
 				<t>IPv6 DAD messages:
         <t>
-        The assumption with EVPN is to have a full entry table from BGP as per 
-        <xref target="RFC9161"/>. DAD messages do not need to be sent over WAN network. 
+        The assumption with EVPN is to have a full entry table from BGP as per
+        <xref target="RFC9161"/>. DAD messages do not need to be sent over WAN network.
         </t>
         </t>
 				<t>IPv6 NS messages:
-        <t> 
-        Neighbor solicitation messages from CE/hosts are not broadcasted over WAN 
-        network. They trigger the address resolution procedure described in this 
+        <t>
+        Neighbor solicitation messages from CE/hosts are not broadcasted over WAN
+        network. They trigger the address resolution procedure described in this
         document.
         </t>
         </t>
         <t>IPv6 NUD messages:
         <t>
-        These messages are unicast data packets. They goes directly to remote PE 
+        These messages are unicast data packets. They goes directly to remote PE
         via the L2 unicast forwarding data-plane.
         </t>
         </t>
         <t>IPv6 RS and RA messages:
         <t>
-        Router solicitation and advertisements is completely out-of-scope. There 
-        is no intent for this draft to provide a solution. The present document 
+        Router solicitation and advertisements is completely out-of-scope. There
+        is no intent for this draft to provide a solution. The present document
         is geared towards CE/host address resolution.
         </t>
         </t>
@@ -487,7 +507,7 @@
 		+ GARPs (broadcast reply messages)
 		+ unsolicited NA messages
 		+ IPv4 probes (ARP requests with sender's ip = 0.0.0.0)
-		+ IPv6 DAD messages		
+		+ IPv6 DAD messages
 	</section>
 -->
       <section anchor="security" title="Security Considerations">
@@ -495,7 +515,7 @@
         <xref target="RFC7432"/>. Security considerations described in
         <xref target="RFC7432"/> are equally applicable. This document uses MPLS
         and IP-based tunnel technologies to support data-plane transport.
-        Security considerations described in <xref target="RFC7432"/> and in 
+        Security considerations described in <xref target="RFC7432"/> and in
         <xref target="RFC8365"/> are equally applicable.</t>
       </section>
 
@@ -518,16 +538,18 @@
     <!-- References split into informative and normative -->
     <references title="Normative References">
       <?rfc include="reference.RFC.2119.xml"?>
-      <?rfc include="reference.RFC.8174.xml"?>   
+      <?rfc include="reference.RFC.2464.xml"?>
+      <?rfc include="reference.RFC.4861.xml"?>
+      <?rfc include="reference.RFC.8174.xml"?>
       <?rfc include="reference.RFC.7432.xml"?>
-      <?rfc include="reference.RFC.8365.xml"?> 
+      <?rfc include="reference.RFC.8365.xml"?>
       <?rfc include="reference.RFC.9161.xml"?>
       <?rfc include="reference.RFC.9047.xml"?>
     </references>
 <!--
     <references title="Informative References">
         <?rfc include="reference.RFC.5905.xml"?>
-    </references> 
+    </references>
 
     <section anchor="contributors" title="Contributors">
     <t>In addition to the authors listed on the front page, the following co-authors

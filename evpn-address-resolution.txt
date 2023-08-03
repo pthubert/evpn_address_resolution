@@ -1,0 +1,616 @@
+
+
+
+
+BESS Working Group                                     P. Brissette, Ed.
+Internet-Draft                                              J. Chaloupka
+Intended status: Standards Track                                   Cisco
+Expires: 4 February 2024                                      J. Rabadan
+                                                                   Nokia
+                                                                 D. Ward
+                                                            PacketFabric
+                                                           S. Matsushima
+                                                                Softbank
+                                                              D. Bernier
+                                                             Bell Canada
+                                                           3 August 2023
+
+
+                  EVPN IP Address Resolution Extension
+            draft-ietf-brissette-evpn-address-resolution-00
+
+Abstract
+
+   This document presents an enhanced control plane for Ethernet VPN
+   (EVPN) that eliminates the need for data plane flooding of ARP/ND
+   messages.  EVPN enables hosts to communicate within the same subnet,
+   and the current EVPN E-LAN solution relies on data plane flooding for
+   IP address resolution.  This proposed solution aims to reduce
+   flooding and optimize communication in large-scale networks.
+
+Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in RFC 2119 [RFC2119] and
+   RFC 8174 [RFC8174].
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+
+
+
+Brissette, et al.        Expires 4 February 2024                [Page 1]
+
+Internet-Draft         EVPN IP Address Resolution            August 2023
+
+
+   This Internet-Draft will expire on 4 February 2024.
+
+Copyright Notice
+
+   Copyright (c) 2023 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Simplified BSD License text
+   as described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Simplified BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+     1.1.  Terminology . . . . . . . . . . . . . . . . . . . . . . .   3
+   2.  Address Resolution Solution . . . . . . . . . . . . . . . . .   3
+   3.  BGP EVPN Address Resolution Route . . . . . . . . . . . . . .   5
+     3.1.  Address Resolution Encoding . . . . . . . . . . . . . . .   5
+   4.  Considerations  . . . . . . . . . . . . . . . . . . . . . . .   7
+     4.1.  Usage of ESI field  . . . . . . . . . . . . . . . . . . .   8
+     4.2.  Originating Address . . . . . . . . . . . . . . . . . . .   8
+     4.3.  Rebuilding NS message on Egress PE  . . . . . . . . . . .   8
+   5.  Security Considerations . . . . . . . . . . . . . . . . . . .   9
+   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   9
+   7.  Normative References  . . . . . . . . . . . . . . . . . . . .   9
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  10
+
+1.  Introduction
+
+   Ethernet VPN (EVPN) solutions, as defined in [RFC7432], facilitate
+   communication between connected endpoints (CE) or hosts that share
+   the same subnet.  This communication utilizes broadcast and multicast
+   forwarding, also known as flooding, which is a common behavior in
+   Layer-2 networks.  However, this flooding behavior can pose
+   challenges for some providers, leading to unpredictable patterns and
+   increased bandwidth consumption in their networks.  Moreover, it may
+   expose security risks, potentially enabling malicious users to launch
+   DDoS attacks.
+
+   While [RFC9161] has made significant progress in reducing flooding
+   over EVPN networks through ARP/ND proxy behavior, certain aspects
+   remain unresolved.  The initial sign of life messaging when a CE/host
+   connects to the network is not addressed.  Intra-subnet communication
+
+
+
+Brissette, et al.        Expires 4 February 2024                [Page 2]
+
+Internet-Draft         EVPN IP Address Resolution            August 2023
+
+
+   relies on neighbor discovery protocols (ARP/ND), where ARP requests
+   and Neighbor Solicitation (NS) messages are flooded across the
+   Layer-2 core network to all remote devices connected to that subnet.
+
+   Unfortunately, in a large-scale network, this flood of three or more
+   broadcast/multicast messages from CE/hosts to discover remote CE/
+   hosts can lead to unpredictable flooding storms.  Some deployments
+   resort to provisioning static ARP/ND entries to mitigate this
+   behavior.  However, maintaining such a list of static entries proves
+   to be costly and cumbersome, especially when adding or removing new
+   CE/hosts.
+
+1.1.  Terminology
+
+   CE:  Customer Edge Router
+
+   DAD:  IPv6 Duplicate Address Detection message
+
+   GARP:  Gratuitous ARP message
+
+   NA:  IPv6 Neighbor Advertisement message
+
+   ND:  IPv6 Neighbor Discovery
+
+   NS:  IPv6 Neighbor Solicitation message
+
+   PE:  Provider Edge Router
+
+   Request / Solicitation:  The term request is widely used in this
+      document.  It refers to ARP request for IPv4 or ND solicitation
+      for IPv6.
+
+   RPL:  Route Policy Language
+
+   RT-2:  Referring to EVPN route type-2 (MAC/IP)
+
+2.  Address Resolution Solution
+
+   This document proposes a new solution extending the EVPN control-
+   plane where the IP address resolution is performed from control-plane
+   rather than data-plane.  The procedure leverages ARP/ND proxy
+   capabilities as described in [RFC9161].  The following section
+   describes the behaviour to perform ARP resolution.  Neighbor
+   Discovery Protocol works in a similar manner.
+
+
+
+
+
+
+
+Brissette, et al.        Expires 4 February 2024                [Page 3]
+
+Internet-Draft         EVPN IP Address Resolution            August 2023
+
+
+           +-----+     +-----+   +---------+   +-----+     +-----+
+           | CE1 |-----| PE1 |---|   CORE  |---| PE2 |-----| CE2 |
+           +-----+     +-----+   |    L2   |   +-----+     +-----+
+           MAC: M1               +---------+               MAC: M2
+           IP: IP1                                         IP: IP2
+
+
+   Layer-2 Network
+
+   This picture shows a simple layer-2 network where a common subnet is
+   shared across CE1 and CE2.  PE1 and PE2 support the new IP address
+   resolution procedure.
+
+   In this example, CE1 initiates the communication with CE2 using ARP
+   protocol.  The new procedure is as follow:
+
+   1.  CE1 sends ARP requests to PE1 with destination IP=IP2 and
+       broadcast MAC address as destination address.
+
+   2.  PE1 punts incoming ARP requests to control-plane.  Data-plane
+       floods these requests to all locally connected ACs (in the same
+       broadcast domain) only and avoids the replication / flooding to
+       any remote PEs over the L2 core.
+
+   3.  PE1 learns the CE1 ARP request entry in control-plane to keep
+       track of this request.  PE1 creates a single new BGP-EVPN IP
+       address resolution route, which is advertised to remote PEs
+       (PE2).  Basically, it requests all remote PEs to look for a
+       specific IP address which may be connected for probing purpose.
+
+   4.  PE2 receives a single IP address resolution route and triggers
+       local CE2 ARP request to all locally connected ACs in the same
+       broadcast domain.  PE2 uses CE1 source MAC/IP per ARP request
+       towards connected CEs for transparency.  PE2 performs local
+       probing for specific destination IP2 address.  This becomes a
+       local behaviour from PE2 point-of-view.
+
+   5.  CE2 receives the ARP request and sends an ARP reply with its own
+       information.
+
+   6.  The reply may be punted to control-plane on PE2 where the new
+       MAC_CE2 and IP_CE2 binding is created.  The PE2 advertises to PE1
+       via existing EVPN RT2 (MAC+IP) the CE2 host information.  CE2s
+       ARP Reply may also be forwarded based on a lookup on the
+       destination MAC address via the layer-2 data-plane.
+
+
+
+
+
+
+Brissette, et al.        Expires 4 February 2024                [Page 4]
+
+Internet-Draft         EVPN IP Address Resolution            August 2023
+
+
+   7.  PE1 may create local MAC/IP binding entry in control-plane based
+       on received BGP EVPN RT-2.  Based on the ARP request entry
+       learned initially, PE1 creates an ARP reply message and send it
+       to CE1.  PE1 uses CE2_MAC + CE2_IP for this ARP reply.
+       Optionally, a GARP may be transmitted in replacement of the ARP
+       reply as recommended per [RFC9161] when ARP proxy is in use.
+
+   8.  PE1 marks the initial CE2 request as resolved in control-plane.
+       The associated IP address resolution route advertised in BGP is
+       withdrawn.
+
+3.  BGP EVPN Address Resolution Route
+
+   The IP address resolution procedure requires a new BGP route in EVPN.
+   The BGP EVPN NLRI as defined in [RFC7432] is shown below:
+
+
+               +-----------------------------------+
+               |    Route Type (1 octet)           |
+               +-----------------------------------+
+               |     Length (1 octet)              |
+               +-----------------------------------+
+               | Route Type specific (variable)    |
+               +-----------------------------------+
+
+
+   BGP EVPN NLRI
+
+   This document defines an additional route type (TBD) in the IANA
+   "EVPN Route Types" registry [EVPNRouteTypes] to be used for the
+   advertisement of EVPN probing route:
+
+   *  Value: TBD
+
+   *  Description: IP Address Resolution
+
+   For backward interoperability, a node that does not recognize the
+   route type TBD (RT-TBD) will ignore it.
+
+   The detailed encoding of this route and associated procedures are
+   described in the following sections.
+
+3.1.  Address Resolution Encoding
+
+   An EVPN IP Address Resolution route type for IPv4 or IPv6 consists of
+   the following fields:
+
+
+
+
+
+Brissette, et al.        Expires 4 February 2024                [Page 5]
+
+Internet-Draft         EVPN IP Address Resolution            August 2023
+
+
+               +----------------------------------------+
+               |      RD (8 octets)                     |
+               +----------------------------------------+
+               | Ethernet Segment Identifier (10 octets)|
+               +----------------------------------------+
+               | Ethernet Tag ID (4 octets)             |
+               +----------------------------------------+
+               | Source MAC address (6 octets)          |
+               +----------------------------------------+
+               | Destination MAC address (6 octets)     |
+               +----------------------------------------+
+               | Source IP Prefix Len                   |
+               |    (1 octet, 0 to 32 or 128)           |
+               +----------------------------------------+
+               | Source IP Prefix (4 or 16 octets)      |
+               +----------------------------------------+
+               | Destination IP Prefix Len              |
+               |    (1 octet, 0 to 32 or 128)           |
+               +----------------------------------------+
+               | Destination IP Prefix (4 or 16 octets) |
+               +----------------------------------------+
+
+
+                                  Figure 1
+
+   EVPN Address Resolution Route NLRI for IPv4 and IPv6
+
+   Where:
+
+   *  The Length field of the BGP EVPN NLRI for an EVPN IP Address
+      Resolution route MUST be either 44 (if IPv4 addresses are carried)
+      or 68 (if IPv6 addresses are carried).  The source and destination
+      IP prefixes MUST be from the same IP address family.
+
+   *  The Route Distinguisher (RD) and Ethernet Tag ID MUST be used as
+      defined in [RFC7432].  In particular, the RD is unique per MAC-
+      VRF.
+
+   *  The Ethernet Segment Identifier may be a non-zero 10-octet
+      identifier.  It identifies the first-hop interface when an ESI is
+      configured.  The ESI format is described in [RFC7432].
+
+   *  The source MAC address is the one from the CE originating the IP
+      address resolution request.
+
+
+
+
+
+
+
+Brissette, et al.        Expires 4 February 2024                [Page 6]
+
+Internet-Draft         EVPN IP Address Resolution            August 2023
+
+
+   *  The destination MAC address is the one received from the request
+      on the first-hop PE.  It can either be set to broadcast MAC
+      address or be set to a specific value when the PE is dealing with
+      a unicast request.
+
+   *  The source IP prefix length can be set to a value between 0 and 32
+      (bits) for IPv4 and between 0 and 128 for IPv6, and it specifies
+      the number of bits in the prefix.  The value MUST NOT be greater
+      than 128.
+
+   *  The source IP prefix is a 4- or 16-octet field (IPv4 or IPv6).
+      The value is set to the source IP address of the originator of the
+      request.
+
+   *  The destination IP prefix length can be set to a value between 0
+      and 32 (bits) for IPv4 and between 0 and 128 for IPv6, and it
+      specifies the number of bits in the prefix.  The value MUST NOT be
+      greater than 128.
+
+   *  The destination IP prefix is a 4- or 16-octet field (IPv4 or
+      IPv6).  The value is set to the targeted IP address of the
+      incoming request.
+
+   The RD, Ethernet Tag ID, source and destination MAC, source and
+   destination IP prefix length and IP prefix are part of the route key
+   used by BGP to compare routes.  The rest of the fields are not part
+   of the route key.
+
+4.  Considerations
+
+   There are clear reasons for the usage of a new EVPN BGP route type to
+   perform IP address resolution:
+
+   *  Possible prioritization of routes exchange between PE (importance
+      of ARP/ND request/solicitation compare to other routes).
+
+   *  Specific manipulation over each IP address resolution request and
+      response (security feature, RPL, etc.).
+
+   *  Usage of dedicate route reflector for scalability and performance
+      to handle specifically any address resolution routes.
+
+   *  Backward interoperability with current machinery.  For instance,
+      the extension of RT-2 to achieve similar behaviour is
+      inappropriate.  Existing deployed routers may explicit use RT-2
+      routes for forwarding purpose only.
+
+
+
+
+
+Brissette, et al.        Expires 4 February 2024                [Page 7]
+
+Internet-Draft         EVPN IP Address Resolution            August 2023
+
+
+   *  Provides behavioural transparency by carrying source host MAC and
+      IP address to remote PEs.
+
+4.1.  Usage of ESI field
+
+   The ESI field is meaningful when CE/host is connected to multi-homed
+   PE running all-active load-balancing mode.  Its purpose is to avoid
+   unnecessary probing towards the originating CE/host from where the
+   initial request was sourced.
+
+4.2.  Originating Address
+
+   MAC address and IP address of the originating CE are transmitted as
+   part of the new NLRI.  They serve multiple purposes:
+
+   *  Allow remote PE to reconstruct the ARP/ND request packet as if it
+      was received from the data-plane.  The targeted CE won't notice
+      the difference between control-plane based and data-plane based
+      solutions.
+
+   *  Allow multiple CE/host to send ARP/ND request towards the same
+      destination.  Having the source MAC and IP has part of the NLRI
+      key keep all routes unique.
+
+   *  Allow PE to provide security check over the source.
+
+4.3.  Rebuilding NS message on Egress PE
+
+   In the case of IPv6, the neighbor solicitation (NS) message MUST be
+   built as specified in [RFC4861] sections 4.3 and 7.2.2 for the
+   address lookup NS message.
+
+   The Source IP address and the Link Layer Address in the SLLOA option
+   MUST be set to the Source IP Prefix and the Source MAC address in the
+   EVPN Address Resolution Route NLRI Figure 1, respectively.
+
+   The target address MUST be set to the Destination IP Prefix field of
+   the NLRI, and the IP destination address is solicited-node multicast
+   address (SNMA) corresponding to the target address a mandated by
+   [RFC4861].
+
+   The receiver is expected to use the SLLAO and not the source MAC to
+   reply.  At Layer-2, the source MAC MUST be that of the sender (this
+   node).  The receiver is expected to use the SLLAO and not the source
+   MAC to build its neighbor cache entry (NCE).  If the receiver is not
+   compliant and uses the the source MAC instead, this router will
+   receive and route the packets from the receiver to the source IP.
+
+
+
+
+Brissette, et al.        Expires 4 February 2024                [Page 8]
+
+Internet-Draft         EVPN IP Address Resolution            August 2023
+
+
+   The destination SHOULD be set to the multicast MAC address associated
+   to the SNMA (see section 7 of [RFC2464] for Ethernet, unless the
+   source already knows a possible MAC address for the destination in
+   which case, the unicast MAC MUST be tried first.
+
+5.  Security Considerations
+
+   The mechanisms in this document use EVPN control-plane as defined in
+   [RFC7432].  Security considerations described in [RFC7432] are
+   equally applicable.  This document uses MPLS and IP-based tunnel
+   technologies to support data-plane transport.  Security
+   considerations described in [RFC7432] and in [RFC8365] are equally
+   applicable.
+
+6.  IANA Considerations
+
+   This document requests the allocation of value TBD in the "EVPN Route
+   Types" registry defined by [RFC7432] and modification of the registry
+   as follows:
+
+       Value     Description                Reference
+       xxx       Address Resolution route   [this document]
+
+7.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC2464]  Crawford, M., "Transmission of IPv6 Packets over Ethernet
+              Networks", RFC 2464, DOI 10.17487/RFC2464, December 1998,
+              <https://www.rfc-editor.org/info/rfc2464>.
+
+   [RFC4861]  Narten, T., Nordmark, E., Simpson, W., and H. Soliman,
+              "Neighbor Discovery for IP version 6 (IPv6)", RFC 4861,
+              DOI 10.17487/RFC4861, September 2007,
+              <https://www.rfc-editor.org/info/rfc4861>.
+
+   [RFC7432]  Sajassi, A., Ed., Aggarwal, R., Bitar, N., Isaac, A.,
+              Uttaro, J., Drake, J., and W. Henderickx, "BGP MPLS-Based
+              Ethernet VPN", RFC 7432, DOI 10.17487/RFC7432, February
+              2015, <https://www.rfc-editor.org/info/rfc7432>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+
+
+
+Brissette, et al.        Expires 4 February 2024                [Page 9]
+
+Internet-Draft         EVPN IP Address Resolution            August 2023
+
+
+   [RFC8365]  Sajassi, A., Ed., Drake, J., Ed., Bitar, N., Shekhar, R.,
+              Uttaro, J., and W. Henderickx, "A Network Virtualization
+              Overlay Solution Using Ethernet VPN (EVPN)", RFC 8365,
+              DOI 10.17487/RFC8365, March 2018,
+              <https://www.rfc-editor.org/info/rfc8365>.
+
+   [RFC9047]  Rabadan, J., Ed., Sathappan, S., Nagaraj, K., and W. Lin,
+              "Propagation of ARP/ND Flags in an Ethernet Virtual
+              Private Network (EVPN)", RFC 9047, DOI 10.17487/RFC9047,
+              June 2021, <https://www.rfc-editor.org/info/rfc9047>.
+
+   [RFC9161]  Rabadan, J., Ed., Sathappan, S., Nagaraj, K., Hankins, G.,
+              and T. King, "Operational Aspects of Proxy ARP/ND in
+              Ethernet Virtual Private Networks", RFC 9161,
+              DOI 10.17487/RFC9161, January 2022,
+              <https://www.rfc-editor.org/info/rfc9161>.
+
+Authors' Addresses
+
+   Patrice Brissette (editor)
+   Cisco
+
+   Email: pbrisset@cisco.com
+
+
+   Jiri Chaloupka
+   Cisco
+
+   Email: jichalou@cisco.com
+
+
+   Jorge Rabadan
+   Nokia
+
+   Email: jorge.rabadan@nokia.com
+
+
+   David Ward
+   PacketFabric
+
+   Email: dward@packetfabric.com
+
+
+   Satoru Matsushima
+   Softbank
+
+   Email: satoru.matsushima@g.softbank.co.jp
+
+
+
+
+Brissette, et al.        Expires 4 February 2024               [Page 10]
+
+Internet-Draft         EVPN IP Address Resolution            August 2023
+
+
+   Daniel Bernier
+   Bell Canada
+
+   Email: daniel.bernier@bell.ca
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Brissette, et al.        Expires 4 February 2024               [Page 11]
