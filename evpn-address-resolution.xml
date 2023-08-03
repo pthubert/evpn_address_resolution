@@ -434,7 +434,7 @@
             </t><t>
             The destination SHOULD be set to the multicast MAC address
             associated to the SNMA (see section 7 of <xref target="RFC2464"/>
-            for Ethernet, unless the source already knows a possible MAC address
+            for Ethernet), unless the source already knows a possible MAC address
             for the destination in which case, the unicast MAC MUST be tried
             first.
             </t>
